@@ -1,0 +1,12 @@
+{
+  "name": "neo-win-bridges",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Neo 与 Windows 的工程、Codex 上下文和现场工具联动",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

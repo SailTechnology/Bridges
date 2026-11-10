@@ -1,0 +1,29 @@
+{
+  "port": 8877,
+  "projectRoot": "H:/Projects",
+  "dataRoot": "H:/Projects/Bridges/runtime",
+  "tempRoot": "H:/Temp/Codex/Bridges",
+  "codexExecutable": "codex",
+  "pollMs": 5000,
+  "enableCodex": false,
+  "readOnly": true,
+  "profileId": "local-preview",
+  "expectedAccountHash": "",
+  "allowedProjects": ["Bridges"],
+  "allowBuilds": false,
+  "buildPythonExecutable": "H:/Runtimes/MigrationPython/python.exe",
+  "buildRecipes": {
+    "octopus-groundstation": {
+      "name": "章鱼地面站 Apple Silicon 部署包",
+      "projectName": "小飞象章鱼仿生",
+      "builderSha256": "",
+      "enabled": false
+    }
+  },
+  "watchThreadIds": [],
+  "neo": {
+    "sshAlias": "neo-bridge",
+    "agentPath": "~/Projects/Bridges/neo-agent.sh",
+    "enabled": false
+  }
+}

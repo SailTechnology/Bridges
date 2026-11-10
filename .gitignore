@@ -1,0 +1,4 @@
+runtime/
+release/
+*.log
+.DS_Store
