@@ -25,6 +25,18 @@ def contained(root: Path, candidate: Path) -> bool:
         return False
 
 
+def windows_io_path(file: Path) -> Path:
+    """Use extended paths for staging without changing the OS long-path policy."""
+    if os.name != 'nt':
+        return file
+    value = str(file)
+    if value.startswith('\\\\?\\'):
+        return file
+    if value.startswith('\\\\'):
+        return Path('\\\\?\\UNC\\' + value[2:])
+    return Path('\\\\?\\' + value)
+
+
 def verify_sources(project: Path, manifest: dict) -> None:
     for name, record in manifest['sources'].items():
         relative = PurePosixPath(name)
@@ -39,6 +51,10 @@ def build(project: Path, job: Path, expected_builder: str) -> dict:
     project, job = project.resolve(strict=True), job.resolve(strict=True)
     if contained(project, job):
         raise RuntimeError('Job directory must be outside the original project')
+    # Packaging adds an app bundle and archived trace paths beneath the job directory.
+    # Prefix only after checking canonical project containment, so the I/O syntax
+    # cannot make a job inside the original project appear to be outside it.
+    job = windows_io_path(job)
     # Exclusive marker prevents accidental overwrite or reuse of an earlier build.
     with (job / 'build.lock').open('x', encoding='utf-8') as stream:
         stream.write(str(os.getpid()))

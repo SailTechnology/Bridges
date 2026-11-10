@@ -9,7 +9,8 @@
 - 完成了工程文件按需读取、固定构建任务、异步查询、部署包下载和 SHA-256 校验接口。
 - Neo 客户端使用 macOS 自带的 Bash、curl、plutil 和 ditto，提供 `deploy octopus-groundstation` 一个部署入口。
 - 实际在独立的 H: 目录构建了章鱼地面站 v0.8.4：1105 个输入文件通过构建后校验，部署包约 174.4 MB。没有改动原工程和原发布包。
-- Windows 联动服务当前停止；未安装自启动；Tailscale Serve 未启用；未上传任何工程。
+- 已通过 Windows 文件工具实际提交构建并校验部署包，支持深层任务目录中的长路径；原始工程与账号数据未上传。
+- Windows 服务、Tailscale Serve 和自启动分别按首次配对说明启用。
 - Neo 尚未配对，Mac 上的安装和启动尚未实测。
 
 ## 入口

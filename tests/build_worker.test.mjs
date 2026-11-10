@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 
-test('isolated build writes only the fresh job, validates inputs, and refuses reuse',t=>{
+test('isolated build handles deep Windows paths, validates inputs, and refuses reuse',t=>{
   const root=path.join('H:/Temp/Codex/Bridges/tests',crypto.randomUUID()),project=path.join(root,'source'),job=path.join(root,'job');
   fs.mkdirSync(path.join(project,'地面站','packaging','macos'),{recursive:true});fs.mkdirSync(job);
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
@@ -19,6 +19,10 @@ STAGE=PROJECT/'do-not-write-stage'; DIST=PROJECT/'do-not-write-dist'
 def stage():
     STAGE.mkdir(parents=True)
     src=PROJECT/'地面站/core.py'
+    target=BUNDLED_PROJECT/('archived_trace_'*8)/'input.txt'
+    target.parent.mkdir(parents=True)
+    target.write_bytes(src.read_bytes())
+    assert target.is_file()
     return {'sources':{'地面站/core.py':{'sha256':hashlib.sha256(src.read_bytes()).hexdigest()}}}
 def archive(manifest):
     DIST.mkdir(parents=True)
