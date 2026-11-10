@@ -14,7 +14,7 @@ Windows 位置为 `H:\Projects\Bridges`，源工程为 `H:\Projects\小飞象章
 
 ## 你先做的事情
 
-1. 从我自己的私有 GitHub 仓库拉取工具到 `~/Projects/Bridges/接入工具`。若目录已存在，先检查它的 Git 远程和本地改动，再使用 `git pull --ff-only`；不要覆盖已有目录或丢弃本地改动。没有安装 Git 时，先通过官方方式准备 Git，由我处理首次系统安装提示。ZIP 方式也仍可使用。
+1. 从公开 GitHub 仓库拉取工具到 `~/Projects/Bridges/接入工具`，无需登录 GitHub。若目录已存在，先检查它的 Git 远程和本地改动，再使用 `git pull --ff-only`；不要覆盖已有目录或丢弃本地改动。没有安装 Git 时，先通过官方方式准备 Git，由我处理首次系统安装提示。ZIP 方式也仍可使用。
 2. 检查 Tailscale 是否已安装，并让 Neo 加入我自己的私人网络。登录和首次系统授权由我完成；不要自行更换账号、扩大网络访问范围或修改系统安全策略。
 3. 获取 Windows 文件工具的实际地址。Windows 服务目前是停止状态，需要先按说明在 Windows 端启用。参考主机名是 `sailstation.tail416821.ts.net`，可用端口须由 Windows 的实际输出确认，不要猜测已启用。
 4. 用 `bridges-client.sh setup <地址>` 配对。在 Windows 本机页面生成一次性码，由我输入；不要把验证码和 Cookie 放进聊天输出。
@@ -27,7 +27,7 @@ mkdir -p ~/Projects/Bridges
 git clone https://github.com/SailTechnology/Bridges.git ~/Projects/Bridges/接入工具
 ```
 
-私有仓库需要我的 GitHub 账号授权；不要复制 Windows 的 GitHub 凭据。工具包更新可使用：
+公开仓库支持匿名拉取；连接 Windows 文件工具仍需单独配对。不要复制 Windows 的 GitHub 凭据。工具包更新可使用：
 
 ```bash
 git -C ~/Projects/Bridges/接入工具 pull --ff-only

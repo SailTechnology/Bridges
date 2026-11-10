@@ -14,12 +14,12 @@
 
 ## 入口
 
-- 私有仓库：`https://github.com/SailTechnology/Bridges`
+- 公开仓库：`https://github.com/SailTechnology/Bridges`
 - [交给 Neo 上 GPT 的说明](docs/给Neo上的GPT.md)
 - [首次配对与日常部署](docs/首次配对与日常部署.md)
 - [本次检查记录](docs/验证记录_20261110.md)
 
-Neo 首次获取工具（需要使用有此私有仓库权限的 GitHub 账号）：
+Neo 首次获取工具（可以匿名克隆，无需登录 GitHub）：
 
 ```bash
 mkdir -p ~/Projects/Bridges
