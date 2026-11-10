@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bridges · 工程联动</title><link rel="stylesheet" href="/style.css"></head>
 <body>
-<div id="login" class="login hidden"><form id="login-form" class="login-card"><div class="brand-mark">B</div><h1>连接你的工作站</h1><p>在 Windows 的 Bridges 页面生成配对码，输入后继续工作。</p><label for="pair-code">一次性配对码</label><input id="pair-code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="one-time-code" required><button type="submit">连接 Windows</button><p id="login-error" role="alert"></p></form></div>
+<div id="login" class="login hidden"><form id="login-form" class="login-card"><div class="brand-mark">B</div><h1>连接你的工作站</h1><p>首次输入 Windows 页面上的配对码，之后自动记住设备，直到在 Windows 撤销。</p><label for="pair-code">一次性配对码</label><input id="pair-code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="one-time-code" required><button type="submit">连接 Windows</button><p id="login-error" role="alert"></p></form></div>
 <div id="workspace" class="hidden">
   <aside class="sidebar"><a class="brand" href="/"> <span class="brand-mark">B</span><span>Bridges<small>NEO × WINDOWS</small></span></a>
     <nav aria-label="工作区"><button data-view="conversations" class="nav active">对话接续</button><button data-view="projects" class="nav">工程文件</button><button data-view="neo" class="nav">现场工具</button></nav>
     <div class="sidebar-foot"><span class="dot" id="connection-dot"></span><span id="connection-text">连接工作站…</span><small>工程与计算运行在 Windows</small></div>
   </aside>
-  <main><header><div><span class="eyebrow">YOUR WORK, CONNECTED</span><h1 id="page-title">对话接续</h1></div><div class="header-actions"><span class="host-pill" id="host">Windows</span><button id="pair-button" class="secondary hidden">连接 Neo</button></div></header>
+  <main><header><div><span class="eyebrow">YOUR WORK, CONNECTED</span><h1 id="page-title">对话接续</h1></div><div class="header-actions"><span class="host-pill" id="host">Windows</span><button id="devices-button" class="secondary hidden">已授权设备</button><button id="pair-button" class="secondary hidden">连接 Neo</button></div></header>
   <div class="status-bar"><span id="status-text">正在读取会话</span><span id="last-poll"></span></div>
   <section id="conversations" class="view"><div class="split"><div class="list-panel"><div class="panel-heading"><h2>最近对话</h2><button id="refresh" class="text-button">刷新</button></div><input id="search" type="search" placeholder="搜索对话"><div id="threads" class="thread-list"></div></div>
   <div class="conversation"><div id="conversation-empty" class="empty"><div class="empty-symbol">↗</div><h2>接着上一次继续</h2><p>选择一个对话，查看完整历史与当前进度。</p><span class="hint">Windows 保留工程、模型配置和原始上下文</span></div>
@@ -18,6 +18,7 @@
   </main>
 </div>
 <dialog id="takeover-dialog"><form method="dialog"><h2>在这台设备继续</h2><p>接续将使用 Windows 上原来的对话、模型配置和工程。请先结束 Windows 上的当前轮次，接续后从此页面发送消息。</p><label class="checkbox"><input id="takeover-confirm" type="checkbox">我已停止在 Windows 原窗口发送此对话</label><div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button id="confirm-takeover" value="continue" disabled>接续对话</button></div></form></dialog>
-<dialog id="pair-dialog"><form method="dialog"><h2>连接 Neo</h2><p>在 Neo 打开部署说明中的工作站地址，再输入下面的一次性配对码。</p><div id="pair-value" class="pair-value"></div><p>十分钟内有效，成功使用后立即失效。</p><button>完成</button></form></dialog>
+<dialog id="pair-dialog"><form method="dialog"><h2>首次连接 Neo</h2><p>在 Neo 运行首次配对命令，输入下面的一次性配对码。</p><div id="pair-value" class="pair-value"></div><p>配对码十分钟内有效，使用后失效。设备授权永久保留，日常部署无需再输入。</p><button>完成</button></form></dialog>
+<dialog id="devices-dialog"><h2>已授权设备</h2><p>授权不会按时间到期。撤销后，该设备需要重新配对才能访问。</p><div id="devices-list"></div><form method="dialog"><div class="dialog-actions"><button>关闭</button></div></form></dialog>
 <div id="toast" role="status" class="toast hidden"></div><script src="/app.js" type="module"></script>
 </body></html>

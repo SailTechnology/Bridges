@@ -25,6 +25,7 @@ export function id(value) {
 }
 export function redact(text) {
   return String(text).replace(/(Bearer\s+)[^\s"']+/gi,'$1[hidden]')
+    .replace(/\bdev1\.[a-f0-9-]{36}\.[A-Za-z0-9_-]{43}\b/g,'[hidden]')
     .replace(/((?:api[_-]?key|access[_-]?token|authorization|password|cookie)\s*[=:]\s*["']?)[^\s,"'}]+/gi,'$1[hidden]')
     .replace(/\bsk-[A-Za-z0-9_-]{12,}/g,'[hidden]');
 }

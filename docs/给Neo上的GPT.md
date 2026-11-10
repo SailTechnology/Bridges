@@ -7,6 +7,7 @@
 ## 本次已提供
 
 - `macos/bridges-client.sh`：工具客户端，使用 macOS 自带命令，无需安装 Python、Node、Homebrew 或新模型后端。
+- `macos/安装一键部署入口.command`：安装日常使用的桌面入口。
 - `docs/首次配对与日常部署.md`：Windows 首次准备与配对方式。
 - 可用任务标识：`octopus-groundstation`，构建章鱼地面站 Apple Silicon 版。
 
@@ -16,9 +17,10 @@ Windows 位置为 `H:\Projects\Bridges`，源工程为 `H:\Projects\小飞象章
 
 1. 从公开 GitHub 仓库拉取工具到 `~/Projects/Bridges/接入工具`，无需登录 GitHub。若目录已存在，先检查它的 Git 远程和本地改动，再使用 `git pull --ff-only`；不要覆盖已有目录或丢弃本地改动。没有安装 Git 时，先通过官方方式准备 Git，由我处理首次系统安装提示。ZIP 方式也仍可使用。
 2. 检查 Tailscale 是否已安装，并让 Neo 加入我自己的私人网络。登录和首次系统授权由我完成；不要自行更换账号、扩大网络访问范围或修改系统安全策略。
-3. 获取 Windows 文件工具的实际地址，检查 Windows 端已按说明启动服务并启用私网 HTTPS。参考主机名是 `sailstation.tail416821.ts.net`，可用端口须由 Windows 的实际输出确认，不要猜测已启用。
-4. 用 `bridges-client.sh setup <地址>` 配对。在 Windows 本机页面生成一次性码，由我输入；不要把验证码和 Cookie 放进聊天输出。
+3. 已实际验证的地址是 `https://sailstation.tail416821.ts.net:8443`，Neo 已成功读到健康接口。Windows ShieldsUp 阻断已经修复，不需要重新开通 Serve。先确认 `/health` 返回版本至少 `0.2.0`。
+4. 首次用 `bridges-client.sh setup <地址>` 配对。在 Windows 本机页面生成一次性码，由我在 Neo 终端隐藏输入；不要把验证码、Cookie 或设备令牌放进聊天输出。设备授权永久保留，不按七天或闲置时间到期。已有授权时 `setup` 会直接复用，不再问码。
 5. 调用 `status`、`projects`、`deployables`，确认只提供已授权的工程，`accountConnected` 为 false，`octopus-groundstation` 已启用。
+6. 运行 `macos/安装一键部署入口.command` 安装桌面入口。保留已有桌面文件，日常使用此入口或直接执行 `deploy`。
 
 首次拉取命令：
 
@@ -35,7 +37,7 @@ git -C ~/Projects/Bridges/接入工具 pull --ff-only
 
 ## 我说“部署今天的地面站”之后
 
-直接调用：
+直接调用 `deploy`，复用已保存的永久设备授权，不要每次重复首次配对或让用户提供验证码：
 
 ```bash
 /bin/bash ~/Projects/Bridges/接入工具/macos/bridges-client.sh deploy octopus-groundstation
@@ -50,3 +52,5 @@ git -C ~/Projects/Bridges/接入工具 pull --ff-only
 旧地面站服务已运行时，脚本会保留新版本并暂缓启动第二个服务。请检查设备连接和运动状态，再决定如何停止旧服务。首次出现 macOS 应用放行提示时由我处理，不要关闭 SIP 或全局绕过 Gatekeeper。
 
 保留原工程、旧应用和应用数据。不要把这个工具的配对 Cookie 与 GPT 登录凭据混用。
+
+连接失败时保留已保存的授权，检查 Windows 和 Tailscale 状态后重试，不要删除凭据或重新配对来处理网络超时。只有首次接入、用户清除了本机授权文件、Windows 撤销了该设备或切换配置时才需要配对。Windows 本机“已授权设备”可查看和撤销授权。

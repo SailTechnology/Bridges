@@ -10,7 +10,9 @@
 - Neo 客户端使用 macOS 自带的 Bash、curl、plutil 和 ditto，提供 `deploy octopus-groundstation` 一个部署入口。
 - 实际在独立的 H: 目录构建了章鱼地面站 v0.8.4：1105 个输入文件通过构建后校验，部署包约 174.4 MB。没有改动原工程和原发布包。
 - 已通过 Windows 文件工具实际提交构建并校验部署包，支持深层任务目录中的长路径；原始工程与账号数据未上传。
-- Windows 服务、Tailscale Serve 和自启动分别按首次配对说明启用。
+- Windows 已运行 v0.2.0，Tailscale Serve 已配置，当前用户登录后会后台启动文件工具。
+- Neo 已实际通过私网 HTTPS 访问 Windows 健康接口。阻断原因是 Windows Tailscale 的 ShieldsUp，已关闭该阻断。
+- v0.2.0 改为永久设备授权：首次配对一次，随后自动复用，直到在 Windows 手动撤销。提供 Neo 桌面部署入口。
 - Neo 尚未配对，Mac 上的安装和启动尚未实测。
 
 ## 入口
@@ -39,7 +41,15 @@ git -C ~/Projects/Bridges/接入工具 pull --ff-only
 /bin/bash ~/Projects/Bridges/接入工具/macos/bridges-client.sh deploy octopus-groundstation
 ```
 
-首次需要 Windows 启动文件工具、两端加入同一个私人 Tailscale 网络，并配对一次。此后 GPT 可以独立调用该命令。配对过期时需要重新配对。
+首次需要 Windows 启动文件工具、两端加入同一个私人 Tailscale 网络，并配对一次。此后 GPT 可以独立调用该命令，设备授权没有七天或闲置到期限制。
+
+在 Neo 安装一次桌面入口：
+
+```bash
+/bin/bash ~/Projects/Bridges/接入工具/macos/安装一键部署入口.command
+```
+
+以后双击桌面的“部署章鱼地面站.command”即可；它使用同一个永久授权，自动在 Windows 构建、下载成品并安装。
 
 ## 数据位置与隔离
 
@@ -52,7 +62,9 @@ git -C ~/Projects/Bridges/接入工具 pull --ff-only
 | Neo 配对凭据 | `~/Library/Application Support/Bridges/profiles/<配置>` |
 | Neo 下载与各版应用 | `~/Projects/Bridges/profiles/<配置>/deployments/<任务ID>` |
 
-每个端点使用独立配置和 Cookie。更换 Windows 地址必须创建新配置。构建输出使用新任务目录，Neo 安装也使用新目录，旧应用和应用数据保留。
+每个端点使用独立配置和设备令牌。Neo 的令牌只保存在本机私有配置目录，Windows 仅保存设备令牌的哈希。更换 Windows 地址必须创建新配置。构建输出使用新任务目录，Neo 安装也使用新目录，旧应用和应用数据保留。
+
+Windows 本机页面的“已授权设备”可以查看或撤销授权。清除 Neo 本机授权文件、在 Windows 撤销授权或更换配置后，需要重新配对。日常部署和工具更新无需重新配对。
 
 `src/context.mjs` 等文件还保留了早期的 Codex 会话接续原型。这一功能默认关闭、只读，当前文件部署流程不会连接 Codex 账号或同步对话。官方云端工作区接入也未启用。
 

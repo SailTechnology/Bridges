@@ -1,6 +1,7 @@
 #!/bin/bash
-# Uses macOS built-ins only. A profile contains one Windows endpoint and its own pairing cookie.
+# Uses macOS built-ins only. Each profile binds one Windows endpoint and permanent device grant.
 set -euo pipefail
+umask 077
 BRIDGES_PROFILE="${BRIDGES_PROFILE:-windows-primary}"
 [[ "$BRIDGES_PROFILE" =~ ^[A-Za-z0-9_-]+$ ]] || { echo 'Invalid profile name.' >&2; exit 2; }
 BRIDGES_CONFIG="$HOME/Library/Application Support/Bridges/profiles/$BRIDGES_PROFILE"
@@ -9,6 +10,7 @@ BRIDGES_WORK="$HOME/Projects/Bridges/profiles/$BRIDGES_PROFILE"
 /bin/chmod 700 "$BRIDGES_CONFIG"
 BRIDGES_URL_FILE="$BRIDGES_CONFIG/windows-url.txt"
 BRIDGES_COOKIE="$BRIDGES_CONFIG/pairing-cookie.txt"
+BRIDGES_DEVICE_AUTH="$BRIDGES_CONFIG/device-auth.curl"
 
 valid_url() {
   [[ "$1" =~ ^https://[A-Za-z0-9.-]+\.ts\.net(:[0-9]+)?/?$ ]] || [[ "$1" =~ ^http://127\.0\.0\.1:[0-9]+/?$ ]]
@@ -20,8 +22,48 @@ load_url() {
   BRIDGES_URL="${BRIDGES_URL%/}"
 }
 request() {
-  /usr/bin/curl --noproxy '*' --silent --show-error --fail --connect-timeout 10 --max-time 65 \
+  local auth_config=/dev/null
+  if [[ -f "$BRIDGES_DEVICE_AUTH" ]]; then auth_config="$BRIDGES_DEVICE_AUTH"; fi
+  /usr/bin/curl --disable --config "$auth_config" --noproxy '*' --silent --show-error --fail --connect-timeout 10 --max-time 65 \
     --cookie "$BRIDGES_COOKIE" --cookie-jar "$BRIDGES_COOKIE" --header 'X-Bridges-Client: 1' "$@"
+}
+save_device_auth() {
+  local response="$1" token temporary
+  token=$(/usr/bin/plutil -extract deviceToken raw -o - "$response") || { echo 'Windows has not issued a permanent device grant; update the Windows service.' >&2; return 1; }
+  [[ "$token" =~ ^dev1\.[a-f0-9-]{36}\.[A-Za-z0-9_-]{43}$ ]] || { echo 'Invalid device authorization response.' >&2; return 1; }
+  temporary=$(/usr/bin/mktemp "$BRIDGES_CONFIG/device-auth.XXXXXX") || return 1
+  if ! printf 'header = "Authorization: Bearer %s"\n' "$token" > "$temporary" ||
+     ! /bin/chmod 600 "$temporary" || ! /bin/mv -f "$temporary" "$BRIDGES_DEVICE_AUTH"; then
+    /bin/rm -f "$temporary"; echo 'Could not save device authorization; the previous credential was preserved.' >&2; return 1
+  fi
+  unset token
+}
+reuse_device() {
+  local response authenticated
+  response=$(/usr/bin/mktemp "$BRIDGES_CONFIG/session.XXXXXX") || return 2
+  if ! request "$BRIDGES_URL/api/session" --output "$response"; then /bin/rm -f "$response"; return 2; fi
+  if ! authenticated=$(/usr/bin/plutil -extract authenticated raw -o - "$response"); then
+    /bin/rm -f "$response"; echo 'Invalid session response from Windows; no pairing was attempted.' >&2; return 2
+  fi
+  [[ "$authenticated" == true || "$authenticated" == false ]] || { /bin/rm -f "$response"; echo 'Invalid session status.' >&2; return 2; }
+  if [[ "$authenticated" != true ]]; then /bin/rm -f "$response"; return 1; fi
+  if [[ ! -f "$BRIDGES_DEVICE_AUTH" ]]; then
+    if ! request --request POST --header 'Content-Type: application/json' --data "{\"deviceName\":\"Neo/$BRIDGES_PROFILE\"}" "$BRIDGES_URL/api/device/remember" --output "$response"; then
+      /bin/rm -f "$response"; return 2
+    fi
+    if ! save_device_auth "$response"; then /bin/rm -f "$response"; return 2; fi
+  fi
+  /bin/rm -f "$response"
+}
+ensure_authorized() {
+  local result
+  if reuse_device; then return 0; else result=$?; fi
+  if [[ "$result" -eq 1 ]]; then
+    echo 'No active device authorization. Run setup once; normal deployments reuse the saved grant.' >&2
+  else
+    echo 'Windows is unreachable or returned an invalid response. The saved authorization was kept; retry when connected.' >&2
+  fi
+  return "$result"
 }
 valid_id() { [[ "$1" =~ ^[A-Za-z0-9_-]{1,100}$ ]] || { echo 'Invalid identifier.' >&2; exit 2; }; }
 download() {
@@ -62,13 +104,25 @@ case "${1:-help}" in
     fi
     printf '%s\n' "$BRIDGES_INPUT_URL" > "$BRIDGES_URL_FILE"
     load_url
+    if reuse_device; then
+      printf 'Saved device authorization is valid. No pairing code is needed.\n'
+      exit 0
+    else
+      BRIDGES_REUSE_RESULT=$?
+      [[ "$BRIDGES_REUSE_RESULT" -eq 1 ]] || exit "$BRIDGES_REUSE_RESULT"
+    fi
     printf 'Enter the one-time pairing code shown on Windows: '
-    IFS= read -r BRIDGES_PAIR_CODE
+    IFS= read -rs BRIDGES_PAIR_CODE; printf '\n'
     [[ "$BRIDGES_PAIR_CODE" =~ ^[0-9]{8}$ ]] || { echo 'Expected an eight-digit pairing code.' >&2; exit 2; }
-    request --request POST --header 'Content-Type: application/json' --data "{\"code\":\"$BRIDGES_PAIR_CODE\"}" "$BRIDGES_URL/api/login"
+    BRIDGES_PAIR_RESPONSE=$(/usr/bin/mktemp "$BRIDGES_CONFIG/pairing.XXXXXX")
+    if ! request --request POST --header 'Content-Type: application/json' --data "{\"code\":\"$BRIDGES_PAIR_CODE\",\"persistent\":true,\"deviceName\":\"Neo/$BRIDGES_PROFILE\"}" "$BRIDGES_URL/api/login" --output "$BRIDGES_PAIR_RESPONSE"; then
+      /bin/rm -f "$BRIDGES_PAIR_RESPONSE"; unset BRIDGES_PAIR_CODE; exit 1
+    fi
+    if ! save_device_auth "$BRIDGES_PAIR_RESPONSE"; then /bin/rm -f "$BRIDGES_PAIR_RESPONSE"; exit 1; fi
+    /bin/rm -f "$BRIDGES_PAIR_RESPONSE"
     /bin/chmod 600 "$BRIDGES_COOKIE"
     unset BRIDGES_PAIR_CODE
-    printf '\nPaired. No GPT account credentials have been copied.\n'
+    printf 'Device remembered until revoked on Windows. GPT account credentials remain separate.\n'
     ;;
   status|projects|deployables)
     load_url
@@ -130,6 +184,7 @@ case "${1:-help}" in
     ;;
   deploy)
     load_url; BRIDGES_RECIPE="${2:-octopus-groundstation}"; valid_id "$BRIDGES_RECIPE"
+    ensure_authorized
     BRIDGES_RESPONSE=$(/usr/bin/mktemp "$BRIDGES_WORK/tmp/request.XXXXXX")
     request --request POST --header 'Content-Type: application/json' --data "{\"recipe\":\"$BRIDGES_RECIPE\"}" "$BRIDGES_URL/api/builds" --output "$BRIDGES_RESPONSE"
     BRIDGES_JOB=$(/usr/bin/plutil -extract id raw -o - "$BRIDGES_RESPONSE"); valid_id "$BRIDGES_JOB"

@@ -8,7 +8,7 @@ import {Projects,parseRange} from '../src/projects.mjs';
 import {originCheck} from '../src/util.mjs';
 function fixture(t){const root=path.join('H:/Temp/Codex/Bridges/tests',randomUUID());fs.mkdirSync(root,{recursive:true});t.after(()=>fs.rmSync(root,{recursive:true,force:true}));return root;}
 
-test('pairing is single-use, signed, HttpOnly, and cannot be forged',t=>{
+test('pairing is single-use, HttpOnly, and cannot be forged',t=>{
   const auth=new Auth(path.join(fixture(t),'credential.json'));
   const request={socket:{remoteAddress:'100.64.0.2'},headers:{'x-forwarded-proto':'https'}};
   const pairing=auth.pair();const cookie=auth.login(request,pairing.code);assert.match(cookie,/HttpOnly/);assert.match(cookie,/Secure/);

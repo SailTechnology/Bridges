@@ -12,6 +12,7 @@ import {Builds} from './builds.mjs';
 import {HttpError,readJson,atomicJson,bodyJson,jsonResponse,originCheck,redact,id} from './util.mjs';
 
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const VERSION=readJson(path.join(repo,'package.json')).version;
 export function loadConfig(argv=process.argv.slice(2)) {
   const at=argv.indexOf('--config');
   const supplied=at>=0?readJson(path.resolve(argv[at+1])):null;
@@ -55,7 +56,7 @@ export async function createBridge(config,dependencies={}){
     let local=false;
     try{
       const url=new URL(req.url,'http://localhost');
-      if(url.pathname==='/health'&&req.method==='GET')return jsonResponse(res,200,{service:'neo-win-bridges',version:'0.1.0'});
+      if(url.pathname==='/health'&&req.method==='GET')return jsonResponse(res,200,{service:'neo-win-bridges',version:VERSION});
       local=originCheck(req,config.port);
       if(!url.pathname.startsWith('/api/')){
         if(!['GET','HEAD'].includes(req.method))throw new HttpError(405,'方法不支持');
@@ -65,12 +66,29 @@ export async function createBridge(config,dependencies={}){
         res.writeHead(200,{'Content-Type':`${mime}; charset=utf-8`,'Cache-Control':'no-store'});
         return req.method==='HEAD'?res.end():fs.createReadStream(path.join(web,filename)).pipe(res);
       }
-      if(url.pathname==='/api/session'&&req.method==='GET')return jsonResponse(res,200,{authenticated:auth.authenticated(req,local),local});
-      if(url.pathname==='/api/login'&&req.method==='POST'){
-        const data=await bodyJson(req);res.setHeader('Set-Cookie',auth.login(req,data.code));return jsonResponse(res,200,{connected:true});
+      if(url.pathname==='/api/session'&&req.method==='GET'){
+        const claim=auth.claim(req,local);if(claim)auth.require(req,local,res);
+        return jsonResponse(res,200,{authenticated:Boolean(claim),local,permanent:claim?.permanent||false,deviceId:claim?.deviceId||null});
       }
-      auth.require(req,local);
-      const owner=local?'windows-local':req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith('bridges='))?.split('=')[1]?.split('.')[0]||'api-client';
+      if(url.pathname==='/api/login'&&req.method==='POST'){
+        const data=await bodyJson(req),device=auth.loginDevice(req,data.code,data.deviceName);
+        res.setHeader('Set-Cookie',device.cookie);
+        return jsonResponse(res,200,{connected:true,permanent:true,deviceId:device.deviceId,...(data.persistent===true?{deviceToken:device.deviceToken}:{})});
+      }
+      const identity=auth.require(req,local,res),owner=identity.owner;
+      if(url.pathname==='/api/device/remember'&&req.method==='POST'){
+        const data=await bodyJson(req),device=auth.remember(req,data.deviceName);
+        res.setHeader('Set-Cookie',device.cookie);return jsonResponse(res,200,{connected:true,permanent:true,deviceId:device.deviceId,deviceToken:device.deviceToken});
+      }
+      if(url.pathname==='/api/devices'&&req.method==='GET'){
+        if(!local)throw new HttpError(403,'请在 Windows 本机管理设备授权');
+        return jsonResponse(res,200,{data:auth.listDevices()});
+      }
+      const revokeRoute=/^\/api\/devices\/([^/]+)\/revoke$/.exec(url.pathname);
+      if(revokeRoute&&req.method==='POST'){
+        if(!local)throw new HttpError(403,'请在 Windows 本机撤销设备授权');
+        return jsonResponse(res,200,auth.revoke(id(revokeRoute[1])));
+      }
       if(url.pathname==='/api/pair'&&req.method==='POST'){
         if(!local)throw new HttpError(403,'请在 Windows 本机生成配对码');
         return jsonResponse(res,200,auth.pair());
@@ -79,7 +97,7 @@ export async function createBridge(config,dependencies={}){
         res.setHeader('Set-Cookie','bridges=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return jsonResponse(res,200,{loggedOut:true});
       }
       if(url.pathname==='/api/status'&&req.method==='GET')return jsonResponse(res,200,{
-        version:'0.1.0',host:os.hostname(),executionHost:'Windows',codexReady:rpc.ready,codec:rpc.info?.userAgent,
+        version:VERSION,host:os.hostname(),executionHost:'Windows',codexReady:rpc.ready,codec:rpc.info?.userAgent,
         lastPoll:tracker.lastPoll,error:tracker.lastError,watched:[...tracker.watched].map(threadId=>({threadId,...tracker.status(threadId)})),
         neo:{configured:config.neo?.enabled===true},
         fileBridge:config.allowBuilds===true,
@@ -191,6 +209,6 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   try{
     const config=loadConfig(),bridge=await createBridge(config);
     process.on('SIGTERM',()=>bridge.stop());process.on('SIGINT',()=>bridge.stop());
-    console.log(`Bridges v0.1.0 已启动：http://127.0.0.1:${config.port}；工作数据：${config.dataRoot}`);
+    console.log(`Bridges v${VERSION} 已启动：http://127.0.0.1:${config.port}；工作数据：${config.dataRoot}`);
   }catch(e){console.error(redact(e.message));process.exitCode=1;}
 }

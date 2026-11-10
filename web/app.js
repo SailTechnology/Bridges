@@ -81,6 +81,7 @@ async function refreshStatus(){
   $('#status-text').textContent=s.fileBridge?'源工程只读访问 · 在 Windows 构建部署包 · 两端账号各自保留':!s.accountConnected?'离线只读预览 · 账号未连接 · 工程目录按允许清单隔离':s.error?`重连中：${s.error}`:s.codexReady?'原始上下文持续跟踪 · 按需访问工程文件':'正在连接 Codex 服务';
   $('#last-poll').textContent=s.lastPoll?`更新于 ${new Date(s.lastPoll).toLocaleTimeString('zh-CN')}`:'';
   show($('#pair-button'),s.local);
+  show($('#devices-button'),s.local);
   $('#neo-status').textContent=s.neo.configured?'Neo SSH 已配置，可以检查现场设备。':'Neo 尚未接入。按接入说明开启 SSH，并安装随包提供的现场助手。';
   document.querySelectorAll('[data-neo]').forEach(b=>{b.disabled=!s.neo.configured;});
   if(state.selected){
@@ -130,6 +131,22 @@ async function listProjects(){
   const {data}=await api('/api/projects');$('#project-list').replaceChildren();
   for(const project of data){const b=node('button',project.name,'project-item');b.onclick=()=>openProject(project).catch(e=>toast(e.message));b.dataset.id=project.id;$('#project-list').append(b);}
 }
+async function listDevices(){
+  const {data}=await api('/api/devices'),list=$('#devices-list');list.replaceChildren();
+  if(!data.length)list.append(node('p','尚无已配对设备。','hint'));
+  for(const device of data){
+    const row=node('div',undefined,'file-row'),info=node('div');
+    info.append(node('strong',device.name),node('p',`最近访问：${new Date(device.lastSeenAt).toLocaleString('zh-CN')}`,'hint'));
+    row.append(info);
+    if(device.revokedAt)row.append(node('span','已撤销','hint'));
+    else{
+      const button=node('button','撤销','danger');
+      button.onclick=busy(button,async()=>{await api(`/api/devices/${device.id}/revoke`,{});await listDevices();toast(`已撤销 ${device.name} 的访问授权`);});
+      row.append(button);
+    }
+    list.append(row);
+  }
+}
 async function openProject(project){
   state.project=project;state.directory='';$('#project-title').textContent=project.name;$('#project-location').textContent=project.root;
   document.querySelectorAll('.project-item').forEach(b=>b.classList.toggle('active',b.dataset.id===project.id));show($('#git-button'));await listFiles('');
@@ -152,7 +169,7 @@ document.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{
   document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));$('#page-title').textContent=button.textContent;
   if(button.dataset.view==='projects')listProjects().catch(e=>toast(e.message));
 });
-$('#login-form').onsubmit=async event=>{event.preventDefault();try{await api('/api/login',{code:$('#pair-code').value});await init();}catch(e){$('#login-error').textContent=e.message;}};
+$('#login-form').onsubmit=async event=>{event.preventDefault();try{await api('/api/login',{code:$('#pair-code').value});$('#pair-code').value='';await init();}catch(e){$('#login-error').textContent=e.message;}};
 $('#refresh').onclick=busy($('#refresh'),()=>loadThreads($('#search').value.trim()));
 $('#search').oninput=()=>{clearTimeout(state.searchTimer);state.searchTimer=setTimeout(()=>loadThreads($('#search').value.trim()).catch(e=>toast(e.message)),400);};
 $('#older').onclick=busy($('#older'),()=>loadHistory(true));
@@ -175,6 +192,7 @@ $('#composer').onsubmit=async event=>{
   finally{state.loading=false;await refreshStatus().catch(()=>{});}
 };
 $('#pair-button').onclick=busy($('#pair-button'),async()=>{const pair=await api('/api/pair',{});$('#pair-value').textContent=pair.code;$('#pair-dialog').showModal();});
+$('#devices-button').onclick=busy($('#devices-button'),async()=>{await listDevices();$('#devices-dialog').showModal();});
 $('#git-button').onclick=busy($('#git-button'),async()=>{const g=await api(`/api/projects/${state.project.id}/git`);$('#file-preview').textContent=g.available?`HEAD: ${g.head||'尚无提交'}\n\n${g.status}`:'此目录没有可用的 Git 仓库';show($('#file-preview'));});
 document.querySelectorAll('[data-neo]').forEach(b=>b.onclick=busy(b,async()=>{const r=await api('/api/neo',{action:b.dataset.neo});$('#neo-result').textContent=r.output+(r.stderr?'\n'+r.stderr:'');show($('#neo-result'));}));
 async function init(){

@@ -2,3 +2,7 @@ runtime/
 release/
 *.log
 .DS_Store
+credential.json
+trusted-devices.json
+device-auth.curl
+pairing-cookie.txt
