@@ -20,7 +20,7 @@ load_url() {
   BRIDGES_URL="${BRIDGES_URL%/}"
 }
 request() {
-  /usr/bin/curl --silent --show-error --fail --connect-timeout 10 --max-time 65 \
+  /usr/bin/curl --noproxy '*' --silent --show-error --fail --connect-timeout 10 --max-time 65 \
     --cookie "$BRIDGES_COOKIE" --cookie-jar "$BRIDGES_COOKIE" --header 'X-Bridges-Client: 1' "$@"
 }
 valid_id() { [[ "$1" =~ ^[A-Za-z0-9_-]{1,100}$ ]] || { echo 'Invalid identifier.' >&2; exit 2; }; }
@@ -120,7 +120,7 @@ case "${1:-help}" in
     IFS= read -r BRIDGES_APP < "$BRIDGES_POINTER"
     case "$BRIDGES_APP" in "$BRIDGES_WORK"/deployments/*/*.app) ;; *) echo 'Application path is outside this profile.' >&2; exit 1 ;; esac
     [[ -d "$BRIDGES_APP" ]] || { echo 'Application is missing.' >&2; exit 1; }
-    if /usr/bin/curl --silent --fail --max-time 2 --output /dev/null 'http://127.0.0.1:8870/api/health'; then
+    if /usr/bin/curl --noproxy '*' --silent --fail --max-time 2 --output /dev/null 'http://127.0.0.1:8870/api/health'; then
       printf 'New version is installed. An existing ground-station service is running; no second service was started.\n'
       printf 'New application: %s\n' "$BRIDGES_APP"
     else
